@@ -64,13 +64,16 @@ async def get_popular_stations(limit: int = 20):
             response.raise_for_status()
             stations = response.json()
             
-            # Store/update stations in database
-            for station in stations:
-                stations_collection.update_one(
-                    {'stationuuid': station.get('stationuuid')},
-                    {'$set': station},
-                    upsert=True
-                )
+            # Try to store/update stations in database, but continue if it fails
+            try:
+                for station in stations:
+                    stations_collection.update_one(
+                        {'stationuuid': station.get('stationuuid')},
+                        {'$set': station},
+                        upsert=True
+                    )
+            except Exception as db_error:
+                print(f"Warning: Could not update database: {str(db_error)}")
             
             return stations
         except Exception as e:
