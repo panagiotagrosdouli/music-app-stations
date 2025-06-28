@@ -21,10 +21,43 @@ app.add_middleware(
 )
 
 # MongoDB connection
-client = MongoClient(os.environ.get('MONGO_URL', 'mongodb://mongodb:27017'))
-db = client.music_app
-comments_collection = db.comments
-stations_collection = db.stations
+try:
+    client = MongoClient(os.environ.get('MONGO_URL', 'mongodb://localhost:27017'), serverSelectionTimeoutMS=5000)
+    # Test the connection
+    client.admin.command('ping')
+    db = client.music_app
+    comments_collection = db.comments
+    stations_collection = db.stations
+    print("MongoDB connection successful")
+except Exception as e:
+    print(f"MongoDB connection error: {str(e)}")
+    # Create dummy collections that won't actually store data
+    # This allows the app to run even if MongoDB is not available
+    from pymongo.collection import Collection
+    class DummyCollection:
+        def __init__(self, name):
+            self.name = name
+            self._data = []
+            
+        def insert_one(self, document):
+            self._data.append(document)
+            return type('obj', (object,), {'inserted_id': document.get('id', 'dummy_id')})
+            
+        def find(self, query=None, projection=None):
+            return self._data
+            
+        def update_one(self, filter, update, upsert=False):
+            return type('obj', (object,), {'modified_count': 0, 'upserted_id': None})
+            
+        def delete_one(self, query):
+            return type('obj', (object,), {'deleted_count': 0})
+            
+        def sort(self, *args, **kwargs):
+            return self
+    
+    db = type('obj', (object,), {'name': 'dummy_db'})
+    comments_collection = DummyCollection('comments')
+    stations_collection = DummyCollection('stations')
 
 # Models
 class Comment(BaseModel):
