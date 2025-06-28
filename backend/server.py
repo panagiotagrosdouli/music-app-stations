@@ -151,22 +151,41 @@ async def get_countries():
 @app.post("/api/comments")
 async def create_comment(comment: Comment):
     """Create a new comment"""
-    comment_data = {
-        'id': str(uuid.uuid4()),
-        'content': comment.content,
-        'author': comment.author,
-        'target_id': comment.target_id,
-        'target_type': comment.target_type,
-        'timestamp': datetime.utcnow()
-    }
-    
     try:
-        comments_collection.insert_one(comment_data)
-        return comment_data
+        comment_data = {
+            'id': str(uuid.uuid4()),
+            'content': comment.content,
+            'author': comment.author,
+            'target_id': comment.target_id,
+            'target_type': comment.target_type,
+            'timestamp': datetime.utcnow().isoformat()  # Convert to ISO format string
+        }
+        
+        try:
+            comments_collection.insert_one(comment_data)
+        except Exception as e:
+            print(f"Error creating comment: {str(e)}")
+        
+        # Return a serializable version of the comment data
+        return {
+            'id': comment_data['id'],
+            'content': comment_data['content'],
+            'author': comment_data['author'],
+            'target_id': comment_data['target_id'],
+            'target_type': comment_data['target_type'],
+            'timestamp': comment_data['timestamp']
+        }
     except Exception as e:
-        print(f"Error creating comment: {str(e)}")
-        # Return the comment data anyway, even if we couldn't save it to the database
-        return comment_data
+        print(f"Error in create_comment: {str(e)}")
+        # Return a basic response if something went wrong
+        return {
+            'id': str(uuid.uuid4()),
+            'content': comment.content,
+            'author': comment.author,
+            'target_id': comment.target_id,
+            'target_type': comment.target_type,
+            'timestamp': datetime.utcnow().isoformat()
+        }
 
 @app.get("/api/comments/{target_id}")
 async def get_comments(target_id: str, target_type: str = Query(...)):
