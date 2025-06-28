@@ -195,6 +195,12 @@ async def get_comments(target_id: str, target_type: str = Query(...)):
             {'target_id': target_id, 'target_type': target_type},
             {'_id': 0}
         ).sort('timestamp', -1))
+        
+        # Ensure timestamps are serializable
+        for comment in comments:
+            if isinstance(comment.get('timestamp'), datetime):
+                comment['timestamp'] = comment['timestamp'].isoformat()
+                
         return comments
     except Exception as e:
         print(f"Error fetching comments: {str(e)}")
